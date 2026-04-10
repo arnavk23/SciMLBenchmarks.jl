@@ -24,6 +24,8 @@ using StatsPlots
 using StatsBase: countmap
 using Printf
 using OptimizationOptimJL: LBFGS, ConjugateGradient, NelderMead
+
+include(joinpath(@__DIR__, "common.jl"))
 # Only robust solvers (safe_solvers)
 safe_solvers = [
     ("LBFGS", LBFGS()),
@@ -32,7 +34,7 @@ safe_solvers = [
 ]
 optimizers = safe_solvers
 
-function get_stats(sol, optimizer_name)
+_unused_get_stats(sol, optimizer_name)
     if hasfield(typeof(sol), :stats) && hasfield(typeof(sol.stats), :time)
         solve_time = sol.stats.time
     else
@@ -41,7 +43,7 @@ function get_stats(sol, optimizer_name)
     return (length(sol.u), solve_time, optimizer_name, Symbol(sol.retcode))
 end
 
-function run_benchmarks(problems, optimizers; chunk_size=1)
+_unused_run_benchmarks(problems, optimizers; chunk_size=1)
     """Enhanced benchmark loop with chunked processing and better error handling"""
     problem = String[]
     n_vars = Int64[]
@@ -153,6 +155,8 @@ suitable_problems = filter(p -> begin
     finalize(nlp)
     nvars <= 100 && nvars >= 2  # Between 2 and 100 variables
 end, unc_problems[1:50])  # Check first 50 problems
+
+suitable_problems = filter_problematic(suitable_problems)
 
 println("Selected $(length(suitable_problems)) suitable problems for comprehensive testing")
 

@@ -30,6 +30,8 @@ using DataFrames
 using Plots
 using StatsPlots
 using StatsBase: countmap
+
+include(joinpath(@__DIR__, "common.jl"))
 ```
 
 # Benchmarks
@@ -45,7 +47,7 @@ optimizers = [
 ]
 
 # Known problematic CUTEst cases from issue #935 diagnostics.
-const ISSUE_935_SKIPLIST = Set([
+const _unused_ISSUE_935_SKIPLIST = Set([
     "bloweya", "chardis1", "cleuven4", "cmpc3", "cmpc10", "cvxqp2", "cvxqp3",
     "dittert", "expfita", "haifal", "hanging", "hier13", "himmelp2", "hs67",
     "hs85", "hs101", "liswet9", "lukvle8", "lukvli7", "lukvli13", "mpc2",
@@ -53,9 +55,9 @@ const ISSUE_935_SKIPLIST = Set([
     "stcqp1", "synthes1", "avgasb",
 ])
 
-filter_problematic(problems) = filter(p -> !(lowercase(p) in ISSUE_935_SKIPLIST), problems)
+_unused_filter_problematic(problems) = filter(p -> !(lowercase(p) in _unused_ISSUE_935_SKIPLIST), problems)
 
-function get_stats(sol, optimizer_name)
+_unused_get_stats(sol, optimizer_name)
     if hasfield(typeof(sol), :stats) && hasfield(typeof(sol.stats), :time)
         solve_time = sol.stats.time
     else
@@ -64,7 +66,7 @@ function get_stats(sol, optimizer_name)
     return (length(sol.u), solve_time, optimizer_name, Symbol(sol.retcode))
 end
 
-function run_benchmarks(problems, optimizers; chunk_size=3)
+_unused_run_benchmarks(problems, optimizers; chunk_size=3)
     problem = String[]
     n_vars = Int64[]
     secs = Float64[]

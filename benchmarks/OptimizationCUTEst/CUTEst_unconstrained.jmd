@@ -29,6 +29,8 @@ using Plots
 using StatsPlots
 using StatsBase: countmap
 
+include(joinpath(@__DIR__, "common.jl"))
+
 
 optimizers = [
     ("LBFGS", LBFGS()),
@@ -37,93 +39,6 @@ optimizers = [
     ("SimulatedAnnealing", SimulatedAnnealing()),
     ("ParticleSwarm", ParticleSwarm()),
 ]
-
-# Known problematic CUTEst cases from issue #935 diagnostics.
-const ISSUE_935_SKIPLIST = Set([
-    "bloweya", "chardis1", "cleuven4", "cmpc3", "cmpc10", "cvxqp2", "cvxqp3",
-    "dittert", "expfita", "haifal", "hanging", "hier13", "himmelp2", "hs67",
-    "hs85", "hs101", "liswet9", "lukvle8", "lukvli7", "lukvli13", "mpc2",
-    "mss1", "ninenew", "patternne", "reading2", "reading6", "s268", "sosqp2",
-    "stcqp1", "synthes1", "avgasb",
-])
-
-filter_problematic(problems) = filter(p -> !(lowercase(p) in ISSUE_935_SKIPLIST), problems)
-
-function get_stats(sol, optimizer_name)
-    if hasfield(typeof(sol), :stats) && hasfield(typeof(sol.stats), :time)
-        solve_time = sol.stats.time
-    else
-        solve_time = NaN
-    end
-    return (length(sol.u), solve_time, optimizer_name, Symbol(sol.retcode))
-end
-
-function run_benchmarks(problems, optimizers; chunk_size=1)
-    problem = String[]
-    n_vars = Int64[]
-    secs = Float64[]
-    solver = String[]
-    retcode = Symbol[]
-    optz = length(optimizers)
-    n = length(problems)
-    @info "Processing $(n) problems with $(optz) optimizers in chunks of $(chunk_size)"
-    broadcast(c -> sizehint!(c, optz * n), [problem, n_vars, secs, solver, retcode])
-    for chunk_start in 1:chunk_size:n
-        chunk_end = min(chunk_start + chunk_size - 1, n)
-        chunk_problems = problems[chunk_start:chunk_end]
-        @info "Processing chunk $(div(chunk_start-1, chunk_size)+1)/$(div(n-1, chunk_size)+1): problems $(chunk_start)-$(chunk_end)"
-        for (idx, prob_name) in enumerate(chunk_problems)
-            current_problem = chunk_start + idx - 1
-            @info "Problem $(current_problem)/$(n): $(prob_name)"
-            nlp_prob = nothing
-            try
-                nlp_prob = CUTEstModel(prob_name)
-                if nlp_prob.meta.nvar > 10000
-                    @info "  Skipping $(prob_name) (too large: $(nlp_prob.meta.nvar) variables)"
-                    finalize(nlp_prob)
-                    continue
-                end
-                prob = OptimizationNLPModels.OptimizationProblem(nlp_prob, Optimization.AutoFiniteDiff())
-                for (optimizer_name, optimizer) in optimizers
-                    try
-                        sol = solve(prob, optimizer; maxiters = 1000, maxtime = 30.0)
-                        @info "✓ Solved $(prob_name) with $(optimizer_name) - Status: $(sol.retcode)"
-                        vars, time, alg, code = get_stats(sol, optimizer_name)
-                        push!(problem, prob_name)
-                        push!(n_vars, vars)
-                        push!(secs, time)
-                        push!(solver, alg)
-                        push!(retcode, code)
-                    catch e
-                        push!(problem, prob_name)
-                        push!(n_vars, nlp_prob !== nothing ? nlp_prob.meta.nvar : -1)
-                        push!(secs, NaN)
-                        push!(solver, optimizer_name)
-                        push!(retcode, :FAILED)
-                    end
-                end
-            catch e
-                for (optimizer_name, optimizer) in optimizers
-                    push!(problem, prob_name)
-                    push!(n_vars, -1)
-                    push!(secs, NaN)
-                    push!(solver, optimizer_name)
-                    push!(retcode, :LOAD_FAILED)
-                end
-            finally
-                if nlp_prob !== nothing
-                    try
-                        finalize(nlp_prob)
-                    catch e
-                    end
-                end
-            end
-        end
-        GC.gc()
-        @info "Completed chunk, memory usage cleaned up"
-    end
-    return DataFrame(problem = problem, n_vars = n_vars, secs = secs, solver = solver, retcode = retcode)
-end
 
 unc_problems = collect(CUTEst.select_sif_problems(contype="unc"))
 unc_problems = filter_problematic(unc_problems)
