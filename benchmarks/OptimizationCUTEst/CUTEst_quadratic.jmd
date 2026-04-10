@@ -32,6 +32,17 @@ optimizers = [
         "print_level" => 5)),
 ]
 
+# Known problematic CUTEst cases from issue #935 diagnostics.
+const ISSUE_935_SKIPLIST = Set([
+    "bloweya", "chardis1", "cleuven4", "cmpc3", "cmpc10", "cvxqp2", "cvxqp3",
+    "dittert", "expfita", "haifal", "hanging", "hier13", "himmelp2", "hs67",
+    "hs85", "hs101", "liswet9", "lukvle8", "lukvli7", "lukvli13", "mpc2",
+    "mss1", "ninenew", "patternne", "reading2", "reading6", "s268", "sosqp2",
+    "stcqp1", "synthes1", "avgasb",
+])
+
+filter_problematic(problems) = filter(p -> !(lowercase(p) in ISSUE_935_SKIPLIST), problems)
+
 function get_stats(sol, optimizer_name)
     # Robustly get solve_time, even if stats or time is missing
     solve_time = try
@@ -109,7 +120,6 @@ function run_benchmarks(problems, optimizers; chunk_size=1)
     return DataFrame(problem = problem, n_vars = n_vars, secs = secs, solver = solver, retcode = retcode)
 end
 ```
-```
 
 # Benchmarks
 
@@ -128,8 +138,7 @@ constraints. There are 252 such problems in the suite.
 quad_problems = CUTEst.select_sif_problems(objtype="quadratic", contype="linear")
 @info "Testing $(length(quad_problems)) quadratic problems with linear constraints"
 quad_problems = quad_problems[1:min(30, length(quad_problems))]
- # Skip HIER13, BLOWEYA, LUKVLE8, PATTERNNE, READING2, NINENEW, READING6, DITTERT, CVXQP2, and MSS1 if present
-quad_problems = filter(p -> !(lowercase(p) in ["hier13", "bloweya", "s268", "stcqp1", "cvxqp3", "avgasb", "lukvle8", "sosqp2", "patternne", "reading2", "ninenew", "reading6", "dittert", "liswet9", "cleuven4", "cvxqp2", "mss1", "mpc2", "cmpc10", "cmpc3"]), quad_problems)
+quad_problems = filter_problematic(quad_problems)
 @info "Testing $(length(quad_problems)) quadratic problems with linear constraints (subset)"
 
 

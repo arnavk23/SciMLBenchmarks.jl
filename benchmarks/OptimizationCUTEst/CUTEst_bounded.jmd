@@ -34,6 +34,17 @@ optimizers = [
         "print_level" => 5)),
 ]
 
+# Known problematic CUTEst cases from issue #935 diagnostics.
+const ISSUE_935_SKIPLIST = Set([
+    "bloweya", "chardis1", "cleuven4", "cmpc3", "cmpc10", "cvxqp2", "cvxqp3",
+    "dittert", "expfita", "haifal", "hanging", "hier13", "himmelp2", "hs67",
+    "hs85", "hs101", "liswet9", "lukvle8", "lukvli7", "lukvli13", "mpc2",
+    "mss1", "ninenew", "patternne", "reading2", "reading6", "s268", "sosqp2",
+    "stcqp1", "synthes1", "avgasb",
+])
+
+filter_problematic(problems) = filter(p -> !(lowercase(p) in ISSUE_935_SKIPLIST), problems)
+
 function get_stats(sol, optimizer_name)
     # Robustly get solve_time, even if stats or time is missing
     solve_time = try
@@ -133,8 +144,7 @@ problems on this section.
 # Select a moderate subset of equality-constrained bounded problems for a realistic mix
 eq_bou_problems = CUTEst.select_sif_problems(min_con=1, only_equ_con=true, only_free_var=false)
 eq_bou_problems = eq_bou_problems[1:min(30, length(eq_bou_problems))]
- # Skip HIER13, BLOWEYA, LUKVLE8, READING2, NINENEW, READING6, DITTERT, CVXQP2, and MSS1 if present
-eq_bou_problems = filter(p -> !(lowercase(p) in ["hier13", "bloweya", "lukvle8", "patternne", "reading2", "ninenew", "reading6", "dittert", "cvxqp2", "mss1"]), eq_bou_problems)
+eq_bou_problems = filter_problematic(eq_bou_problems)
 @info "Testing $(length(eq_bou_problems)) equality-constrained bounded problems (subset)"
 
 # Analysis
@@ -192,8 +202,7 @@ Next, we examine the same relationship for inequality-constrained problems.
 # Select a moderate subset of inequality-constrained bounded problems for a realistic mix
 neq_bou_problems = CUTEst.select_sif_problems(min_con=1, only_ineq_con=true, only_free_var=false)
 neq_bou_problems = neq_bou_problems[1:min(30, length(neq_bou_problems))]
- # Skip HIER13, BLOWEYA, CHARDIS1, LUKVLE8, READING2, CVPXQ2, and MSS1 if present (in case they appear in this list too)
-neq_bou_problems = filter(p -> !(lowercase(p) in ("chardis1", "hs67", "hs101", "haifal", "himmelp2", "hanging", "synthes1", "lukvli13", "liswet9", "hs85", "lukvli7", "expfita", "s268")), neq_bou_problems)
+neq_bou_problems = filter_problematic(neq_bou_problems)
 @info "Testing $(length(neq_bou_problems)) inequality-constrained bounded problems (subset)"
 
 # Analysis

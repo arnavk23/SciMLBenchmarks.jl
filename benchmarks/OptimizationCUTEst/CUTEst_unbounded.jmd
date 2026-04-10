@@ -44,6 +44,17 @@ optimizers = [
         "print_level" => 5)),
 ]
 
+# Known problematic CUTEst cases from issue #935 diagnostics.
+const ISSUE_935_SKIPLIST = Set([
+    "bloweya", "chardis1", "cleuven4", "cmpc3", "cmpc10", "cvxqp2", "cvxqp3",
+    "dittert", "expfita", "haifal", "hanging", "hier13", "himmelp2", "hs67",
+    "hs85", "hs101", "liswet9", "lukvle8", "lukvli7", "lukvli13", "mpc2",
+    "mss1", "ninenew", "patternne", "reading2", "reading6", "s268", "sosqp2",
+    "stcqp1", "synthes1", "avgasb",
+])
+
+filter_problematic(problems) = filter(p -> !(lowercase(p) in ISSUE_935_SKIPLIST), problems)
+
 function get_stats(sol, optimizer_name)
     if hasfield(typeof(sol), :stats) && hasfield(typeof(sol.stats), :time)
         solve_time = sol.stats.time
@@ -136,11 +147,8 @@ using DataFrames
 all_eq_unb_problems = CUTEst.select_sif_problems(min_con=1, only_equ_con=true, only_free_var=true)
 println("Available equality-constrained, unbounded problems:")
 println(all_eq_unb_problems)
-eq_unb_problems = all_eq_unb_problems[1:min(10, length(all_eq_unb_problems))]
-# Remove the 8th problem if it is 'luk' or 'lukvle8' (case-insensitive)
-if length(eq_unb_problems) >= 8 && (lowercase(eq_unb_problems[8]) == "luk" || lowercase(eq_unb_problems[8]) == "lukvle8")
-    eq_unb_problems = vcat(eq_unb_problems[1:7], eq_unb_problems[9:end])
-end
+eq_unb_problems = filter_problematic(all_eq_unb_problems)
+eq_unb_problems = eq_unb_problems[1:min(10, length(eq_unb_problems))]
 @info "Testing $(length(eq_unb_problems)) equality-constrained unbounded problems"
 
 # Analysis
@@ -188,6 +196,7 @@ Next, we examine the same relationship for problems with inequality-constrained 
 ```julia
 using DataFrames
 all_ineq_unb_problems = CUTEst.select_sif_problems(min_con=1, only_ineq_con=true, only_free_var=true)
+all_ineq_unb_problems = filter_problematic(all_ineq_unb_problems)
 # Restrict to a small, easy subset for demonstration/CI
 neq_unb_problems = filter(p -> p in ["HS21", "HS35", "HS38", "HS39", "HS41"], all_ineq_unb_problems)
 @info "Testing $(length(neq_unb_problems)) inequality-constrained unbounded problems"
